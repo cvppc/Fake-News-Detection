@@ -1,0 +1,154 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Updated Title -->
+    <title>FakeNews Detector | LIME & SHAP Explainer</title>
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {{shap_init_js}}
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i> <!-- Changed Icon -->
+                <h1>Truth<span>Lens</span></h1> <!-- Changed Name -->
+            </div>
+            <div class="subtitle">
+                <!-- Updated Subtitle -->
+                <p>AI-powered text analysis tool empowered with LIME & SHAP explainability</p>
+            </div>
+             <!-- Display Model Status -->
+            <div class="model-status">
+                {% if model_loaded %}
+                    <span class="status-ok"><i class="fas fa-check-circle"></i> Model Ready</span>
+                {% else %}
+                    <span class="status-error"><i class="fas fa-exclamation-triangle"></i> Model Loading Error</span>
+                {% endif %}
+            </div>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <h2><i class="fas fa-paragraph"></i> Input Text</h2>
+                <div class="text-input">
+                    <textarea id="news-text" placeholder="Enter news text, article, or statement here..." rows="8"></textarea>
+                    <div class="controls">
+                        <button id="reset-btn" class="secondary-btn" title="Clear input and results">
+                            <i class="fas fa-undo"></i> Clear
+                        </button>
+                        <!-- Disable button if model not loaded -->
+                        <button id="predict-btn" class="primary-btn" title="Analyze the text" {% if not model_loaded %}disabled{% endif %}>
+                            <i class="fas fa-search"></i> Analyze
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section - Initially Hidden -->
+            <div class="results-section hidden" id="results-container">
+                <!-- Loader -->
+                <div class="loader" id="loader">
+                    <div class="spinner"></div>
+                    <p>Analyzing text... Please wait.</p>
+                </div>
+
+                <!-- Result Content - Shown after loading -->
+                <div class="result-content hidden" id="result-content">
+                    <!-- Verdict Section -->
+                    <div class="verdict-section">
+                        <h2><i class="fas fa-poll"></i> Classification Result</h2>
+                        <div class="verdict">
+                            <div class="verdict-icon">
+                                <i id="verdict-icon-element" class="fas"></i>
+                            </div>
+                            <div class="verdict-text">
+                                <p class="prediction-text">This text is classified as: <span id="prediction" class="prediction-label"></span></p>
+                                <div class="confidence-bar">
+                                    <div class="confidence-level" id="confidence-level"></div>
+                                </div>
+                                <p class="confidence-text">Confidence: <strong id="confidence-value"></strong>%</p>
+                                <!-- Optionally display raw scores -->
+                                <p class="confidence-text" style="font-size: 0.85rem; margin-top: 5px;" id="raw-scores"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LIME Explanation Section -->
+                    <div class="explanation-section" id="lime-explanation-container">
+                        <h2><i class="fas fa-paint-brush"></i> LIME Explanation</h2>
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="lime-text" title="View text with important words highlighted">
+                                <i class="fas fa-highlighter"></i> Highlighted Text
+                            </button>
+                            <button class="tab-btn" data-tab="lime-features" title="View list of most influential words">
+                                <i class="fas fa-list-ol"></i> Key Features
+                            </button>
+                            <button class="tab-btn" data-tab="lime-visual" title="View graphical plot of feature weights">
+                                <i class="fas fa-chart-bar"></i> Visual Plot
+                            </button>
+                        </div>
+
+                        <div class="tab-content">
+                            <!-- LIME Text Highlight Tab -->
+                            <div class="tab-pane active" id="lime-text-tab">
+                                <div class="highlighted-text" id="lime-highlighted-text">
+                                    <!-- Highlighted text inserted here -->
+                                </div>
+                            </div>
+
+                            <!-- LIME Features Tab -->
+                            <div class="tab-pane" id="lime-features-tab">
+                                <div class="feature-list" id="lime-feature-list">
+                                    <!-- Features will be inserted here -->
+                                </div>
+                            </div>
+
+                             <!-- LIME Visual Plot Tab -->
+                            <div class="tab-pane" id="lime-visual-tab">
+                                <div class="plot-container">
+                                    <img id="lime-plot" src="" alt="LIME Explanation Plot">
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- End LIME Section -->
+
+                     <!-- SHAP Explanation Section - Added -->
+                    <div class="explanation-section" id="shap-explanation-container" style="margin-top: 40px;">
+                        <h2><i class="fas fa-puzzle-piece"></i> SHAP Explanation</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.95rem;">
+                            This plot shows how each word/token pushes the model's prediction. Red pushes towards 'FAKE', Blue pushes towards 'REAL'. The length of the bar indicates the magnitude of influence.
+                        </p>
+                        <div id="shap-plot-container" class="plot-container">
+                            <p style="padding: 20px; text-align: center; color: var(--text-secondary);">SHAP plot will appear here...</p>
+                        </div>
+                    </div>
+
+                </div> <!-- End Result Content -->
+
+                <!-- Error Message Display -->
+                <div class="error-message hidden" id="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p><strong>Analysis Error</strong></p>
+                    <p id="error-text"></p>
+                </div>
+            </div> <!-- End Results Container -->
+        </main>
+
+        <footer>
+            <!-- Updated Footer -->
+            <p>© 2025 TruthLens - Powered by <a href="https://github.com/marcotcr/lime" target="_blank" rel="noopener noreferrer">LIME</a>, <a href="https://github.com/slundberg/shap" target="_blank" rel="noopener noreferrer">SHAP</a> & <a href="https://huggingface.co/transformers/" target="_blank" rel="noopener noreferrer">Transformers</a></p>
+        </footer>
+    </div> <!-- End Container -->
+<script src="{{ url_for('static', filename='js/bundle.js') }}"></script>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+</body>
+</html>
